@@ -1,0 +1,129 @@
+'use client'
+
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
+import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { MoreVertical, Pencil, Trash2 } from 'lucide-react'
+import ClienteFormDialog from './ClienteFormDialog'
+
+type AccionesClienteProps = {
+  clienteId: number
+  clienteNombre: string
+  clientePais: string | null
+}
+
+export default function AccionesCliente({
+  clienteId,
+  clienteNombre,
+  clientePais,
+}: AccionesClienteProps) {
+  const router = useRouter()
+  const supabase = createClient()
+
+  const [openEditar, setOpenEditar] = useState(false)
+  const [openEliminar, setOpenEliminar] = useState(false)
+  const [loading, setLoading] = useState(false)
+
+  const handleEliminar = async () => {
+    setLoading(true)
+    const { error } = await supabase
+      .from('clientes')
+      .delete()
+      .eq('id', clienteId)
+
+    setLoading(false)
+    setOpenEliminar(false)
+
+    if (error) {
+      alert('Error al eliminar: ' + error.message)
+      return
+    }
+
+    router.refresh()
+  }
+
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon" className="h-8 w-8">
+            <MoreVertical className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem
+            className="flex items-center gap-2 cursor-pointer"
+            onSelect={(e) => {
+              e.preventDefault()
+              setOpenEditar(true)
+            }}
+          >
+            <Pencil className="h-4 w-4" />
+            Editar
+          </DropdownMenuItem>
+
+          <DropdownMenuItem
+            className="flex items-center gap-2 text-red-600 cursor-pointer"
+            onSelect={(e) => {
+              e.preventDefault()
+              setOpenEliminar(true)
+            }}
+          >
+            <Trash2 className="h-4 w-4" />
+            Eliminar
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      {/* Diálogo editar (controlado, sin botón propio) */}
+      <ClienteFormDialog
+        clienteId={clienteId}
+        initialData={{ nombre: clienteNombre, pais: clientePais || '' }}
+        open={openEditar}
+        onOpenChange={setOpenEditar}
+      />
+
+      {/* Diálogo eliminar */}
+      <AlertDialog open={openEliminar} onOpenChange={setOpenEliminar}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              ¿Eliminar cliente &quot;{clienteNombre}&quot;?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. Se eliminarán también todas las
+              marcas y capturas asociadas a este cliente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={loading}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleEliminar}
+              disabled={loading}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {loading ? 'Eliminando...' : 'Sí, eliminar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  )
+}
