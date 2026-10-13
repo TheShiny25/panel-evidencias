@@ -1,0 +1,42 @@
+name: Capturas Programadas
+
+on:
+  schedule:
+    # Cada 30 minutos (minuto 0 y 30)
+    - cron: '0,30 * * * *'
+  workflow_dispatch: # Permite ejecución manual
+
+jobs:
+  capturar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Instalar dependencias del scheduler
+        working-directory: ./scheduler
+        run: npm ci
+
+      - name: Instalar Playwright + Chromium
+        working-directory: ./scheduler
+        run: npx playwright install --with-deps chromium
+
+      - name: Ejecutar scheduler
+        working-directory: ./scheduler
+        env:
+          HEADLESS: 'true'
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_BUCKET_NAME: ${{ secrets.AWS_BUCKET_NAME }}
+          AWS_BASE_PATH: ${{ secrets.AWS_BASE_PATH }}
+        run: node scheduler.js
